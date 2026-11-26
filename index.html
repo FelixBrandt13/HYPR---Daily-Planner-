@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HYPR Planner</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#090910;color:#f4f2fa;font-family:Arial,sans-serif}
+header{padding:24px;background:linear-gradient(135deg,#30165b,#100d20);border-bottom:1px solid #393044}
+h1{margin:0;color:#c7a4ff;letter-spacing:3px}
+header p{color:#aaa;margin-bottom:0}
+main{padding:16px;max-width:700px;margin:auto}
+.card{background:#171522;border:1px solid #343044;border-radius:16px;padding:16px;margin-bottom:14px}
+h2{font-size:18px;color:#c7a4ff}
+.days{display:flex;gap:6px;flex-wrap:wrap}
+button{background:#292238;color:white;border:1px solid #594278;padding:10px;border-radius:10px}
+button.active{background:#7943bd}
+.task{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid #302b3c}
+.task input{accent-color:#a56bff;width:20px;height:20px}
+.task.done span{text-decoration:line-through;color:#777}
+.small{color:#aaa;font-size:13px}
+progress{width:100%;accent-color:#a56bff;height:12px}
+textarea,input[type=text]{width:100%;background:#0d0b16;color:white;border:1px solid #49405a;border-radius:10px;padding:12px}
+</style>
+</head>
+<body>
+<header>
+<h1>HYPR</h1>
+<p>DAILY PERFORMANCE PLANNER</p>
+</header>
+<main>
+<div class="card">
+<h2>Deine Woche</h2>
+<div class="days" id="days"></div>
+</div>
+<div class="card">
+<h2 id="dateTitle">Tagesplan</h2>
+<div id="tasks"></div>
+<p id="progressText">0 XP</p>
+<progress id="progress" value="0" max="100"></progress>
+</div>
+<div class="card">
+<h2>Deine Tagesziele</h2>
+<div id="goals"></div>
+</div>
+<div class="card">
+<h2>Tagesänderungen</h2>
+<p class="small">Passe deinen Tag spontan an.</p>
+<textarea id="notes" rows="5" placeholder="Hier Änderungen, Termine oder Notizen eintragen..."></textarea>
+</div>
+<div class="card">
+<h2>HYPR Motivation</h2>
+<p>Jeder kleine Schritt zählt. Bleib konstant, nicht perfekt.</p>
+<p id="totalXP">Gesamt XP: 0</p>
+<button onclick="resetDay()">Tag zurücksetzen</button>
+</div>
+</main>
+<script>
+const schedules={
+"Montag":[
+["05:45","Aufstehen"],
+["05:50","Zähne putzen & Gesichtspflege"],
+["06:00","Haare & fertig machen"],
+["06:08","Anziehen"],
+["06:12","Frühstück"],
+["06:25","Tasche kontrollieren"],
+["06:40","Bus"],
+["07:30","Schule"],
+["09:30","Snack & Wasser"],
+["12:00","Mittagessen"],
+["15:00","Schulschluss"],
+["15:30","Snack & Pause"],
+["16:00","Lernen / Hausaufgaben"],
+["17:00","Krafttraining A – moderat, sauber"],
+["17:35","Duschen & Erholung"],
+["18:00","Abendessen"],
+["18:30","Freizeit / Gaming"],
+["19:30","Lesen oder Lernen"],
+["20:00","Zimmer & Tasche vorbereiten"],
+["20:30","Abendroutine & Zähne"],
+["21:00","Handy weg & entspannen"],
+["21:30","Schlafen"]
+],
+"Dienstag":[
+["05:45","Aufstehen"],
+["05:50","Zähne & Gesicht"],
+["06:00","Haare & fertig machen"],
+["06:08","Anziehen"],
+["06:12","Frühstück"],
+["06:25","Tasche prüfen"],
+["06:40","Bus"],
+["07:30","Schule"],
+["09:30","Snack & Wasser"],
+["12:00","Mittagessen"],
+["15:00","Schulschluss"],
+["15:30","Snack & Pause"],
+["16:00","Hausaufgaben"],
+["16:30","Fußball vorbereiten"],
+["17:00","Fußballtraining"],
+["18:30","Training Ende & Heimweg"],
+["19:00","Duschen"],
+["19:30","Abendessen"],
+["20:00","Freizeit"],
+["20:30","Vorbereitung & Zähne"],
+["21:00","Handy weg & Entspannung"],
+["21:30","Schlafen"]
+],
+"Mittwoch":[
+["05:45","Aufstehen"],
+["05:50","Zähne & Gesicht"],
+["06:00","Haare & fertig machen"],
+["06:08","Anziehen"],
+["06:12","Frühstück"],
+["06:25","Tasche prüfen"],
+["06:40","Bus"],
+["07:30","Schule"],
+["09:30","Snack & Wasser"],
+["12:00","Mittagessen"],
+["15:00","Schulschluss"],
+["15:30","Pause & Snack"],
+["16:00","Hausaufgaben"],
+["17:00","Krafttraining B – moderat, sauber"],
+["17:35","Duschen & Erholung"],
+["18:00","Abendessen"],
+["18:30","Gaming / Freizeit"],
+["19:30","Lesen"],
+["20:00","Zimmer & Tasche vorbereiten"],
+["20:30","Abendroutine"],
+["21:00","Handy weg & entspannen"],
+["21:30","Schlafen"]
+],
+"Donnerstag":[
+["05:45","Aufstehen"],
+["05:50","Zähne & Gesicht"],
+["06:00","Haare & fertig machen"],
+["06:08","Anziehen"],
+["06:12","Frühstück"],
+["06:25","Tasche prüfen"],
+["06:40","Bus"],
+["07:30","Schule"],
+["09:30","Snack & Wasser"],
+["12:00","Mittagessen"],
+["15:00","Schulschluss"],
+["15:30","Snack & Pause"],
+["16:00","Hausaufgaben"],
+["16:30","Fußball vorbereiten"],
+["17:00","Fußballtraining"],
+["18:30","Training Ende & Heimweg"],
+["19:00","Duschen"],
+["19:30","Abendessen"],
+["20:00","Freizeit"],
+["20:30","Vorbereitung & Zähne"],
+["21:00","Handy weg & Entspannung"],
+["21:30","Schlafen"]
+],
+"Freitag":[
+["05:45","Aufstehen"],
+["05:50","Zähne & Gesicht"],
+["06:00","Haare & fertig machen"],
+["06:08","Anziehen"],
+["06:12","Frühstück"],
+["06:25","Tasche prüfen"],
+["06:40","Bus"],
+["07:30","Schule"],
+["09:30","Snack & Wasser"],
+["12:00","Mittagessen"],
+["15:00","Schulschluss"],
+["15:30","Snack & Pause"],
+["16:00","Tennis vorbereiten"],
+["16:30","Tennis / Anfahrt"],
+["20:00","Tennis Ende"],
+["20:15","Duschen"],
+["20:30","Abendessen & Entspannung"],
+["21:00","Zähne & Abendroutine"],
+["21:30","Schlafen"]
+],
+"Samstag":[
+["08:00","Aufstehen & Frühstück"],
+["08:30","Morgenroutine"],
+["09:00","Spieltag vorbereiten"],
+["10:00","Spiel / flexible Spielzeit"],
+["13:00","Mittagessen"],
+["14:00","Erholung"],
+["15:00","Freizeit / Gaming"],
+["17:00","Spaziergang oder Mobilität"],
+["18:00","Abendessen"],
+["19:00","Freizeit"],
+["20:30","Abendroutine"],
+["21:00","Entspannung"],
+["21:30","Schlafen"]
+],
+"Sonntag":[
+["08:00","Aufstehen"],
+["08:15","Morgenroutine"],
+["08:30","Frühstück"],
+["09:00","Ruhetag & Freizeit"],
+["10:30","Lesen / Interessen"],
+["12:00","Mittagessen"],
+["13:00","Freizeit"],
+["15:00","Woche planen"],
+["16:00","Zimmer aufräumen"],
+["17:00","Spaziergang & Erholung"],
+["18:00","Abendessen"],
+["19:00","Schulmaterial vorbereiten"],
+["20:00","Abendroutine"],
+["21:00","Handy weg & entspannen"],
+["21:30","Schlafen"]
+]
+};
+const dayNames=Object.keys(schedules);
+let day="Montag";
+let checks=JSON.parse(localStorage.getItem("hyprChecks")||"{}");
+let goals=JSON.parse(localStorage.getItem("hyprGoals")||"{}");
+let notes=JSON.parse(localStorage.getItem("hyprNotes")||"{}");
+let xp=Number(localStorage.getItem("hyprXP")||0);
+
+function save(){
+localStorage.setItem("hyprChecks",JSON.stringify(checks));
+localStorage.setItem("hyprGoals",JSON.stringify(goals));
+localStorage.setItem("hyprNotes",JSON.stringify(notes));
+localStorage.setItem("hyprXP",xp);
+}
+
+function renderDays(){
+document.getElementById("days").innerHTML=dayNames.map(d=>`<button class="${d===day?'active':''}" onclick="setDay('${d}')">${d.substring(0,2)}</button>`).join("");
+}
+
+function setDay(d){
+notes[day]=document.getElementById("notes").value;
+day=d;
+render();
+}
+
+function render(){
+renderDays();
+document.getElementById("dateTitle").textContent=day+" – Tagesplan";
+let list=schedules[day];
+
+if(!checks[day])checks[day]=Array(list.length).fill(false);
+
+document.getElementById("tasks").innerHTML=list.map((t,i)=>`<label class="task ${checks[day][i]?'done':''}"><input type="checkbox" ${checks[day][i]?'checked':''} onchange="toggle(${i})"><span><b>${t[0]}</b> – ${t[1]}</span></label>`).join("");
+
+let done=checks[day].filter(Boolean).length;
+document.getElementById("progressText").textContent=done+" von "+list.length+" erledigt · "+done*10+" XP";
+document.getElementById("progress").value=done/list.length*100;
+
+document.getElementById("notes").value=notes[day]||"";
+
+document.getElementById("goals").innerHTML=["Lernen","Bewegung oder Sport","Genug trinken","Lesen","Zimmer ordentlich","Abendroutine"].map((g,i)=>`<label class="task"><input type="checkbox" ${goals[day]?.[i]?'checked':''} onchange="goalToggle(${i})"><span>${g}</span></label>`).join("");
+
+document.getElementById("totalXP").textContent="Gesamt XP: "+xp;
+}
+
+function toggle(i){
+checks[day][i]=!checks[day][i];
+if(checks[day][i])xp+=10;
+else xp-=10;
+save();
+render();
+}
+
+function goalToggle(i){
+if(!goals[day])goals[day]=Array(6).fill(false);
+goals[day][i]=!goals[day][i];
+if(goals[day][i])xp+=15;
+else xp-=15;
+save();
+render();
+}
+
+function resetDay(){
+checks[day]=Array(schedules[day].length).fill(false);
+goals[day]=Array(6).fill(false);
+notes[day]="";
+save();
+render();
+}
+
+document.getElementById("notes").addEventListener("input",e=>{
+notes[day]=e.target.value;
+save();
+});
+
+render();
+</script>
+</body>
+</html>   
